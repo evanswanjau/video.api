@@ -1,6 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define an interface representing a document in MongoDB.
 interface IVideo extends Document {
   title: string;
   description: string;
@@ -10,7 +9,7 @@ interface IVideo extends Document {
   mimetype: string;
   status: string;
   duration: number;
-  // user: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Schema.Types.ObjectId;
   tags: string[];
   likes: number;
   dislikes: number;
@@ -18,7 +17,6 @@ interface IVideo extends Document {
   updatedAt: Date;
 }
 
-// Create a Schema corresponding to the document interface.
 const videoSchema: Schema = new Schema<IVideo>(
   {
     title: {
@@ -52,18 +50,18 @@ const videoSchema: Schema = new Schema<IVideo>(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'processed', 'failed'],
+      enum: ['pending', 'active', 'suspended'],
       default: 'pending',
     },
     duration: {
       type: Number,
       required: true,
     },
-    // user: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: 'User',
-    //   required: true,
-    // },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     tags: {
       type: [String],
       default: [],

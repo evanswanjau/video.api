@@ -1,7 +1,10 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import videoRoutes from './routes/video';
 import dotenv from 'dotenv';
+import cors from 'cors';
+import videoRoutes from './routes/video';
+import userRoutes from './routes/user';
+
 
 dotenv.config();
 
@@ -10,6 +13,7 @@ const port = process.env.PORT || 8000;
 
 // Middleware to parse JSON
 app.use(express.json());
+app.use(cors());
 
 // Connect to MongoDB Atlas
 const mongoUri = process.env.MONGO_URI || '';
@@ -19,8 +23,9 @@ mongoose
   .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
 
 app.use('/api/videos/', videoRoutes);
+app.use('/api/users/', userRoutes);
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Api is running on port ${port} 🚀`);
+  console.log(`Server is running on port ${port} 🚀`);
 });

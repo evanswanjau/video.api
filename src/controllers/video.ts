@@ -3,11 +3,13 @@ import fs from 'fs';
 import multer, { StorageEngine } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
-import Video from '../models/video';
+import Video from '../models/Video';
 
-// Define a custom request interface to include the file property
+// Define a custom request interface to include the file property and user properties
 interface MulterRequest extends Request {
   file: Express.Multer.File;
+  userId?: string;
+  role?: string;
 }
 
 const storage: StorageEngine = multer.diskStorage({
@@ -35,8 +37,14 @@ const upload = multer({ storage: storage });
 export const uploadVideo = upload.single('video');
 
 export const handleUpload = async (req: MulterRequest, res: Response) => {
+  if (!req.userId || req.role !== 'admin') {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
   try {
-    const { title, description, duration, user, tags } = req.body;
+    const { title, description, duration, tags } = req.body;
     const { filename, path: filepath, size, mimetype } = req.file;
 
     const video = new Video({
@@ -47,7 +55,7 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
       size,
       mimetype,
       duration,
-      user,
+      user: req.userId,
       tags: tags ? tags.split(',') : [],
     });
 
@@ -61,6 +69,12 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
 };
 
 export const updateVideo = async (req: Request, res: Response) => {
+  if (!req.userId || req.role !== 'admin') {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -80,6 +94,12 @@ export const updateVideo = async (req: Request, res: Response) => {
 };
 
 export const deleteVideo = async (req: Request, res: Response) => {
+  if (!req.userId || req.role !== 'admin') {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
   try {
     const { id } = req.params;
 
@@ -106,8 +126,17 @@ export const deleteVideo = async (req: Request, res: Response) => {
 
 export const getAllVideos = async (req: Request, res: Response) => {
   try {
-    const videos = await Video.find();
-    res.json(videos);
+    const { page = 1, limit = 10 } = req.query;
+    const videos = await Video.find()
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+    const total = await Video.countDocuments();
+    res.json({
+      videos,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
   } catch (error: any) {
     res
       .status(500)
@@ -130,5 +159,49 @@ export const getVideo = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: 'Failed to fetch video', details: error.message });
+  }
+};
+
+export const getVideosByUserID = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const videos = await Video.find({ user: id })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+    const total = await Video.countDocuments({ user: id });
+    res.json({
+      videos,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch user videos', details: error.message });
+  }
+};
+
+export const searchVideos = async (req: Request, res: Response) => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+    const searchQuery = query
+      ? { title: { $regex: query, $options: 'i' } }
+      : {};
+    const videos = await Video.find(searchQuery)
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+    const total = await Video.countDocuments(searchQuery);
+    res.json({
+      videos,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to search videos', details: error.message });
   }
 };

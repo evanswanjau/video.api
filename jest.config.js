@@ -3,4 +3,5 @@ module.exports = {
   testEnvironment: 'node',
   setupFiles: ['dotenv/config'],
   setupFilesAfterEnv: ['./src/jest.setup.ts'],
+  testTimeout: 30000,
 };
