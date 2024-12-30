@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import videoRoutes from './routes/video';
 import userRoutes from './routes/user';
+import tagRoutes from './routes/tag';
 
 
 dotenv.config();
@@ -24,6 +25,7 @@ mongoose
 
 app.use('/api/videos/', videoRoutes);
 app.use('/api/users/', userRoutes);
+app.use('/api/tags/', tagRoutes);
 
 // Start the server
 app.listen(port, () => {
