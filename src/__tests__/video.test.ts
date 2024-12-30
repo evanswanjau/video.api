@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import videoRoutes from '../routes/video';
 import Video from '../models/Video';
 import User from '../models/User';
+import Tag from '../models/Tag';
 
 // Set up the Express app
 const app = express();
@@ -22,6 +23,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await User.deleteMany({});
   await Video.deleteMany({});
+  await Tag.deleteMany({});
 });
 
 // Clean up the test database
@@ -52,19 +54,30 @@ describe('POST /api/videos/upload', () => {
 
     const token = generateToken(user._id.toString(), user.role);
 
+    const tag1 = new Tag({ name: 'tag1' });
+    const tag2 = new Tag({ name: 'tag2' });
+    const tag3 = new Tag({ name: 'tag3' });
+    await tag1.save();
+    await tag2.save();
+    await tag3.save();
+
     const response = await request(app)
       .post('/api/videos/upload')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Test Video')
       .field('description', 'Test Description')
       .field('duration', '120')
-      .field('tags', 'tag1,tag2,tag3')
+      .field('tags', 'tag1, tag2, tag3')
       .attach('video', 'uploads/videos/test_video.mp4');
-
+    
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('title', 'Test Video');
     expect(response.body).toHaveProperty('filename');
     expect(response.body.filename).toMatch(/Test_Video-.*\.mp4/);
+    expect(response.body.tags).toHaveLength(3);
+
+    const tags = await Tag.find({ _id: { $in: response.body.tags } });
+    expect(tags.map((tag) => tag.name)).toEqual(['tag1', 'tag2', 'tag3']);
 
     // Cleanup the uploaded test file
     const filePath = path.resolve('uploads/videos', response.body.filename);
@@ -96,17 +109,18 @@ describe('PUT /api/videos/:id', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['old'],
+      tags: [],
     });
     await video.save();
 
     const response = await request(app)
       .put(`/api/videos/${video._id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'New Title' });
+      .send({ title: 'New Title', tags: 'new1, new2' });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('title', 'New Title');
+    expect(response.body.tags).toHaveLength(2);
   }, 300000);
 });
 
@@ -132,7 +146,6 @@ describe('DELETE /api/videos/:id', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video.save();
 
@@ -185,7 +198,6 @@ describe('GET /api/videos/:id', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video.save();
 
@@ -216,7 +228,6 @@ describe('GET /api/videos/user/:id', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video1.save();
 
@@ -229,7 +240,6 @@ describe('GET /api/videos/user/:id', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video2.save();
     
@@ -264,7 +274,6 @@ describe('GET /api/videos/search', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video1.save();
 
@@ -277,7 +286,6 @@ describe('GET /api/videos/search', () => {
       mimetype: 'video/mp4',
       duration: 120,
       user: user._id,
-      tags: ['test'],
     });
     await video2.save();
 
@@ -291,5 +299,57 @@ describe('GET /api/videos/search', () => {
       'title',
       'Search Test Video 1',
     );
+  });
+
+  it('should search videos by tags', async () => {
+    const user: any = new User({
+      username: 'testuser',
+      email: 'testuser@example.com',
+      password: 'password123',
+      role: 'admin',
+    });
+    await user.save();
+
+    const tag1 = new Tag({ name: 'tag1' });
+    const tag2 = new Tag({ name: 'tag2' });
+    const tag3 = new Tag({ name: 'tag3' });
+    await tag1.save();
+    await tag2.save();
+    await tag3.save();
+
+    const video1 = new Video({
+      title: 'Video 1',
+      description: 'Description 1',
+      filename: 'Video_1-uuid.mp4',
+      filepath: 'uploads/videos/Video_1-uuid.mp4',
+      size: 12345,
+      mimetype: 'video/mp4',
+      duration: 120,
+      user: user._id,
+      tags: [tag1._id, tag2._id],
+    });
+    await video1.save();
+
+    const video2 = new Video({
+      title: 'Video 2',
+      description: 'Description 2',
+      filename: 'Video_2-uuid.mp4',
+      filepath: 'uploads/videos/Video_2-uuid.mp4',
+      size: 12345,
+      mimetype: 'video/mp4',
+      duration: 120,
+      user: user._id,
+      tags: [tag2._id, tag3._id],
+    });
+    await video2.save();
+
+    const response = await request(app).get(
+      `/api/videos/search?tags=${tag2._id}`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.videos).toHaveLength(2);
+    expect(response.body.videos[0]).toHaveProperty('tags');
+    expect(response.body.videos[1]).toHaveProperty('tags');
   });
 });

@@ -4,6 +4,7 @@ import multer, { StorageEngine } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import Video from '../models/Video';
+import Tag from '../models/Tag';
 
 // Define a custom request interface to include the file property and user properties
 interface MulterRequest extends Request {
@@ -47,6 +48,21 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
     const { title, description, duration, tags } = req.body;
     const { filename, path: filepath, size, mimetype } = req.file;
 
+    let tagIds: string[] = [];
+    if (tags) {
+      tagIds = await Promise.all(
+      tags.split(',').map(async (tag: string) => {
+        const trimmedTag = tag.trim();
+        let tagDoc = await Tag.findOne({ name: trimmedTag });
+        if (!tagDoc) {
+        tagDoc = new Tag({ name: trimmedTag });
+        await tagDoc.save();
+        }
+        return tagDoc._id;
+      })
+      );
+    }
+
     const video = new Video({
       title,
       description,
@@ -56,7 +72,7 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
       mimetype,
       duration,
       user: req.userId,
-      tags: tags ? tags.split(',') : [],
+      tags: tagIds,
     });
 
     await video.save();
@@ -78,6 +94,21 @@ export const updateVideo = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    if (updateData.tags) {
+      const tagIds = await Promise.all(
+        updateData.tags.split(',').map(async (tag: string) => {
+          const trimmedTag = tag.trim();
+          let tagDoc = await Tag.findOne({ name: trimmedTag });
+          if (!tagDoc) {
+            tagDoc = new Tag({ name: trimmedTag });
+            await tagDoc.save();
+          }
+          return tagDoc._id;
+        })
+      );
+      updateData.tags = tagIds;
+    }
 
     const video = await Video.findByIdAndUpdate(id, updateData, { new: true });
 
@@ -148,7 +179,7 @@ export const getVideo = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const video = await Video.findById(id);
+    const video = await Video.findById(id).populate('tags');
 
     if (!video) {
       return res.status(404).json({ error: 'Video not found' });
@@ -185,10 +216,17 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
 
 export const searchVideos = async (req: Request, res: Response) => {
   try {
-    const { query, page = 1, limit = 10 } = req.query;
-    const searchQuery = query
-      ? { title: { $regex: query, $options: 'i' } }
-      : {};
+    const { query, tags, page = 1, limit = 10 } = req.query;
+    const searchQuery: any = {};
+
+    if (query) {
+      searchQuery.title = { $regex: query, $options: 'i' };
+    }
+
+    if (tags) {
+      searchQuery.tags = { $in: (tags as string).split(',').map(tag => tag.trim()) };
+    }
+
     const videos = await Video.find(searchQuery)
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));

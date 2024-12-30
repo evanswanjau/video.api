@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { ITag } from './Tag';
 
 interface IVideo extends Document {
   title: string;
@@ -10,7 +11,7 @@ interface IVideo extends Document {
   status: string;
   duration: number;
   user: mongoose.Schema.Types.ObjectId;
-  tags: string[];
+  tags: ITag['_id'][];
   likes: number;
   dislikes: number;
   createdAt: Date;
@@ -62,10 +63,7 @@ const videoSchema: Schema = new Schema<IVideo>(
       ref: 'User',
       required: true,
     },
-    tags: {
-      type: [String],
-      default: [],
-    },
+    tags: [{ type: mongoose.Types.ObjectId, ref: 'Tag' }],
     likes: {
       type: Number,
       default: 0,
