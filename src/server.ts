@@ -5,6 +5,7 @@ import cors from 'cors';
 import videoRoutes from './routes/video';
 import userRoutes from './routes/user';
 import tagRoutes from './routes/tag';
+import commentRoutes from './routes/comment';
 
 
 dotenv.config();
@@ -26,6 +27,7 @@ mongoose
 app.use('/api/videos/', videoRoutes);
 app.use('/api/users/', userRoutes);
 app.use('/api/tags/', tagRoutes);
+app.use('/api/comments/', commentRoutes);
 
 // Start the server
 app.listen(port, () => {
