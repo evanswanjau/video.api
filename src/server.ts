@@ -7,7 +7,6 @@ import userRoutes from './routes/user';
 import tagRoutes from './routes/tag';
 import commentRoutes from './routes/comment';
 
-
 dotenv.config();
 
 const app = express();
@@ -23,6 +22,10 @@ mongoose
   .connect(mongoUri)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
+
+app.get('/', (req, res) => {
+  res.send('Server is running successfully');
+});
 
 app.use('/api/videos/', videoRoutes);
 app.use('/api/users/', userRoutes);
