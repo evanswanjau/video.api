@@ -3,10 +3,10 @@ import fs from 'fs';
 import multer, { StorageEngine } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import thumbsupply from "thumbsupply";
 import Video from '../models/Video';
 import Tag from '../models/Tag';
 
-// Define a custom request interface to include the file property and user properties
 interface MulterRequest extends Request {
   file: Express.Multer.File;
   userId?: string;
@@ -37,8 +37,21 @@ const upload = multer({ storage: storage });
 
 export const uploadVideo = upload.single('video');
 
+const generateThumbnail = async (
+  filepath: string,
+  videoId: string
+): Promise<string> => {
+  const thumbnailPath = `uploads/video-thumbnails/${videoId}`;
+  const thumbnail = await thumbsupply.generateThumbnail(filepath, {
+    size: thumbsupply.ThumbSize.LARGE,
+    cacheDir: thumbnailPath,
+  });
+
+  return path.join(thumbnailPath, path.basename(thumbnail));
+};
+
 export const handleUpload = async (req: MulterRequest, res: Response) => {
-  if (!req.userId || req.role !== 'admin') {
+  if (!req.userId) {
     return res.status(401).json({
       message: 'You are not authorized to perform this action.',
     });
@@ -51,19 +64,19 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
     let tagIds: string[] = [];
     if (tags) {
       tagIds = await Promise.all(
-      tags.split(',').map(async (tag: string) => {
-        const trimmedTag = tag.trim();
-        let tagDoc = await Tag.findOne({ name: trimmedTag });
-        if (!tagDoc) {
-        tagDoc = new Tag({ name: trimmedTag });
-        await tagDoc.save();
-        }
-        return tagDoc._id;
-      })
+        tags.split(",").map(async (tag: string) => {
+          const trimmedTag = tag.trim();
+          let tagDoc = await Tag.findOne({ name: trimmedTag });
+          if (!tagDoc) {
+            tagDoc = new Tag({ name: trimmedTag });
+            await tagDoc.save();
+          }
+          return tagDoc._id;
+        })
       );
     }
 
-    const video = new Video({
+    const video: any = new Video({
       title,
       description,
       filename,
@@ -76,7 +89,21 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
     });
 
     await video.save();
-    res.status(201).json(video);
+
+    // Generate thumbnail
+    try {
+      const thumbnailPath = await generateThumbnail(
+        filepath,
+        video._id.toString()
+      );
+      video.thumbnail = thumbnailPath;
+      await video.save();
+      res.status(201).json(video);
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: "Failed to generate thumbnail", details: err.message });
+    }
   } catch (error: any) {
     res
       .status(500)
