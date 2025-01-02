@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import fs from 'fs';
+import fs from "fs/promises";
 import multer, { StorageEngine } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
@@ -42,14 +42,20 @@ const generateThumbnail = async (
   videoId: string
 ): Promise<string> => {
   const thumbnailDir = "uploads/thumbnails";
-  const thumbnailPath = path.join(thumbnailDir, `${videoId}.png`);
-  await thumbsupply.generateThumbnail(filepath, {
+  const tempThumbnailPath = await thumbsupply.generateThumbnail(filepath, {
     size: thumbsupply.ThumbSize.LARGE,
     cacheDir: thumbnailDir,
   });
 
+  const thumbnailFilename = `${videoId}.png`;
+  const thumbnailPath = path.join(thumbnailDir, thumbnailFilename);
+
+  // Rename the generated thumbnail to the desired filename
+  await fs.rename(tempThumbnailPath, thumbnailPath);
+
   return thumbnailPath;
 };
+
 export const handleUpload = async (req: MulterRequest, res: Response) => {
   if (!req.userId) {
     return res.status(401).json({
@@ -99,7 +105,7 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
       video.thumbnail = thumbnailPath;
       await video.save();
       res.status(201).json(video);
-    } catch (err: any) {
+    } catch (err:any) {
       res
         .status(500)
         .json({ error: "Failed to generate thumbnail", details: err.message });
@@ -167,14 +173,14 @@ export const deleteVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    fs.unlink(video.filepath, (err) => {
-      if (err) {
-        return res
-          .status(500)
-          .json({ error: 'Failed to delete video file', details: err.message });
-      }
-      res.status(200).json({ message: 'Video deleted successfully' });
-    });
+    try {
+          await fs.unlink(video.filepath);
+          res.status(200).json({ message: 'Video deleted successfully' });
+        } catch (err: any) {
+          res
+            .status(500)
+            .json({ error: 'Failed to delete video file', details: err.message });
+        }
   } catch (error: any) {
     res
       .status(500)
@@ -184,8 +190,9 @@ export const deleteVideo = async (req: Request, res: Response) => {
 
 export const getAllVideos = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const videos = await Video.find()
+      .populate('user', 'username')
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments();
@@ -223,7 +230,7 @@ export const getVideo = async (req: Request, res: Response) => {
 export const getVideosByUserID = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const videos = await Video.find({ user: id })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -243,7 +250,7 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
 
 export const searchVideos = async (req: Request, res: Response) => {
   try {
-    const { query, tags, page = 1, limit = 10 } = req.query;
+    const { query, tags, page = 1, limit = 20 } = req.query;
     const searchQuery: any = {};
 
     if (query) {
