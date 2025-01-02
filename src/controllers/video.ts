@@ -41,15 +41,15 @@ const generateThumbnail = async (
   filepath: string,
   videoId: string
 ): Promise<string> => {
-  const thumbnailPath = `uploads/video-thumbnails/${videoId}`;
-  const thumbnail = await thumbsupply.generateThumbnail(filepath, {
+  const thumbnailDir = "uploads/thumbnails";
+  const thumbnailPath = path.join(thumbnailDir, `${videoId}.png`);
+  await thumbsupply.generateThumbnail(filepath, {
     size: thumbsupply.ThumbSize.LARGE,
-    cacheDir: thumbnailPath,
+    cacheDir: thumbnailDir,
   });
 
-  return path.join(thumbnailPath, path.basename(thumbnail));
+  return thumbnailPath;
 };
-
 export const handleUpload = async (req: MulterRequest, res: Response) => {
   if (!req.userId) {
     return res.status(401).json({
