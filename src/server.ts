@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
 import videoRoutes from './routes/video';
 import userRoutes from './routes/user';
 import tagRoutes from './routes/tag';
@@ -15,6 +16,7 @@ const port = process.env.PORT || 8000;
 // Middleware to parse JSON
 app.use(express.json());
 app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Connect to MongoDB Atlas
 const mongoUri = process.env.MONGO_URI || '';
