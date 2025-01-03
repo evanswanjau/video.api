@@ -8,6 +8,7 @@ import {
   getAllVideos,
   getVideo,
   getVideosByUserID,
+  getVideosByTag,
   searchVideos,
 } from '../controllers/video';
 import { authenticate } from '../middleware/auth';
@@ -21,5 +22,6 @@ router.get('/', getAllVideos);
 router.get('/user/:id', getVideosByUserID);
 router.get('/search', searchVideos);
 router.get('/:id', getVideo);
+router.get('/tag/:tag', getVideosByTag);
 
 export default router;

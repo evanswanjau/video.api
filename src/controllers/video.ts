@@ -193,6 +193,7 @@ export const getAllVideos = async (req: Request, res: Response) => {
     const { page = 1, limit = 20 } = req.query;
     const videos = await Video.find()
       .populate('user', 'username')
+      .populate('tags', 'name')
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments();
@@ -232,6 +233,8 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const videos = await Video.find({ user: id })
+      .populate("user", "username")
+      .populate("tags", "name")
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments({ user: id });
@@ -245,6 +248,35 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: 'Failed to fetch user videos', details: error.message });
+  }
+};
+export const getVideosByTag = async (req: Request, res: Response) => {
+  try {
+    const { tag } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const tagDoc = await Tag.findOne({ name: tag.trim() });
+    if (!tagDoc) {
+      return res.status(404).json({ error: 'Tag not found' });
+    }
+
+    const videos = await Video.find({ tags: tagDoc._id })
+      .populate("user", "username")
+      .populate("tags", "name")
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+    const total = await Video.countDocuments({ tags: tagDoc._id });
+
+    res.json({
+      videos,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch videos by tag', details: error.message });
   }
 };
 

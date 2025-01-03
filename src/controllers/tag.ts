@@ -22,7 +22,35 @@ export const createTag = async (req: Request, res: Response) => {
 // Get all tags
 export const getTags = async (req: Request, res: Response) => {
   try {
-    const tags = await Tag.find();
+    const tags = await Tag.aggregate([
+      {
+        $lookup: {
+          from: 'videos',
+          localField: '_id',
+          foreignField: 'tags',
+          as: 'relatedVideos',
+        },
+      },
+      {
+        $addFields: {
+          videoCount: { $size: '$relatedVideos' },
+        },
+      },
+      {
+        $match: {
+          videoCount: { $gt: 0 },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          videoCount: 1,
+        },
+      },
+    ]);
+
     res.status(200).json(tags);
   } catch (error: any) {
     res

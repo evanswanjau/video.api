@@ -1,13 +1,25 @@
-import mongoose from 'mongoose';
+import axios from 'axios';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import { faker } from '@faker-js/faker';
+import fs from 'fs';
+import FormData from 'form-data';
 import User from '../models/User';
 import Tag from '../models/Tag';
 import Video from '../models/Video';
 import Comment from '../models/Comment';
-import fs from 'fs';
 
 dotenv.config();
+
+const API_BASE_URL = 'http://localhost:8000/api';
+
+const authenticateUser = async (email: string, password: string) => {
+  const response = await axios.post(`${API_BASE_URL}/users/signin`, {
+    email,
+    password,
+  });
+  return response.data.token;
+};
 
 const seedDatabase = async () => {
   try {
@@ -19,70 +31,108 @@ const seedDatabase = async () => {
     await Video.deleteMany({});
     await Comment.deleteMany({});
 
+    const user = {
+      username: 'evanswanjau',
+      email: 'evanswanjau@gmail.com',
+      password: 'password',
+      role: 'admin',
+    };
+
+    await axios.post(`${API_BASE_URL}/users/signup`, user);
+
+    const token = await authenticateUser(user.email, user.password);
+
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
     // Create users
     const users = [];
     for (let i = 0; i < 20; i++) {
-      const user = new User({
+      const user = {
         username: faker.internet.username(),
         email: faker.internet.email(),
         password: 'password123',
         role: i === 0 ? 'admin' : 'user',
+      };
+      const response = await axios.post(`${API_BASE_URL}/users/signup`, user, {
+        headers,
       });
-      await user.save();
-      users.push(user);
+      users.push(response.data);
     }
 
     // Create tags
     const tags = [];
     for (let i = 0; i < 10; i++) {
-      const tag = new Tag({ name: faker.lorem.word() });
-      await tag.save();
-      tags.push(tag);
+      const tag = { name: faker.lorem.word() };
+      const response = await axios.post(`${API_BASE_URL}/tags`, tag, {
+        headers,
+      });
+      tags.push(response.data);
     }
 
     // Create videos
     const videos = [];
     const videoFiles = fs.readdirSync('uploads/downloads');
 
-    for (const [index, file] of videoFiles.entries()) {
+    for (const file of videoFiles) {
       const title = file
         .replace(/\.[^/.]+$/, '')
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (char) => char.toUpperCase());
-      const video = new Video({
-        title: title,
-        description: faker.lorem.paragraph(),
-        filename: file,
-        filepath: `uploads/downloads/${file}`,
-        size: faker.number.int({ min: 1000, max: 100000 }),
-        mimetype: 'video/mp4',
-        duration: faker.number.int({ min: 60, max: 3600 }),
-        user: users[faker.number.int({ min: 0, max: 19 })]._id,
-        tags: [tags[faker.number.int({ min: 0, max: 9 })]._id],
-      });
-      await video.save();
-      videos.push(video);
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', faker.lorem.paragraph());
+      formData.append(
+        'duration',
+        faker.number.int({ min: 60, max: 3600 }).toString(),
+      );
+      formData.append(
+        'tags',
+        Array.from({ length: 3 }, () => faker.lorem.word()).join(','),
+      );
+      formData.append(
+        'video',
+        fs.createReadStream(`uploads/downloads/${file}`),
+      );
+
+      const response = await axios.post(
+        `${API_BASE_URL}/videos/upload`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      videos.push(response.data);
     }
 
     // Create comments and replies
     for (const video of videos) {
       for (let i = 0; i < 20; i++) {
-        const comment = new Comment({
+        const comment = {
           content: faker.lorem.sentence(),
           user: users[faker.number.int({ min: 0, max: 19 })]._id,
           video: video._id,
-        });
-        await comment.save();
+        };
+        const commentResponse = await axios.post(
+          `${API_BASE_URL}/comments`,
+          comment,
+          { headers },
+        );
 
         // Create replies for each comment
         for (let j = 0; j < 5; j++) {
-          const reply = new Comment({
+          const reply = {
             content: faker.lorem.sentence(),
             user: users[faker.number.int({ min: 0, max: 19 })]._id,
             video: video._id,
-            parentComment: comment._id,
-          });
-          await reply.save();
+            parentComment: commentResponse.data._id,
+          };
+          await axios.post(`${API_BASE_URL}/comments`, reply, { headers });
         }
       }
     }
