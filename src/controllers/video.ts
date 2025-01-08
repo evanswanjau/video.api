@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import fs from "fs/promises";
+import fs from 'fs/promises';
 import multer, { StorageEngine } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
-import thumbsupply from "thumbsupply";
+import thumbsupply from 'thumbsupply';
 import Video from '../models/Video';
 import Tag from '../models/Tag';
 
@@ -39,9 +39,9 @@ export const uploadVideo = upload.single('video');
 
 const generateThumbnail = async (
   filepath: string,
-  videoId: string
+  videoId: string,
 ): Promise<string> => {
-  const thumbnailDir = "uploads/thumbnails";
+  const thumbnailDir = 'uploads/thumbnails';
   const tempThumbnailPath = await thumbsupply.generateThumbnail(filepath, {
     size: thumbsupply.ThumbSize.LARGE,
     cacheDir: thumbnailDir,
@@ -70,7 +70,7 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
     let tagIds: string[] = [];
     if (tags) {
       tagIds = await Promise.all(
-        tags.split(",").map(async (tag: string) => {
+        tags.split(',').map(async (tag: string) => {
           const trimmedTag = tag.trim();
           let tagDoc = await Tag.findOne({ name: trimmedTag });
           if (!tagDoc) {
@@ -78,7 +78,7 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
             await tagDoc.save();
           }
           return tagDoc._id;
-        })
+        }),
       );
     }
 
@@ -100,15 +100,15 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
     try {
       const thumbnailPath = await generateThumbnail(
         filepath,
-        video._id.toString()
+        video._id.toString(),
       );
       video.thumbnail = thumbnailPath;
       await video.save();
       res.status(201).json(video);
-    } catch (err:any) {
+    } catch (err: any) {
       res
         .status(500)
-        .json({ error: "Failed to generate thumbnail", details: err.message });
+        .json({ error: 'Failed to generate thumbnail', details: err.message });
     }
   } catch (error: any) {
     res
@@ -138,7 +138,7 @@ export const updateVideo = async (req: Request, res: Response) => {
             await tagDoc.save();
           }
           return tagDoc._id;
-        })
+        }),
       );
       updateData.tags = tagIds;
     }
@@ -174,13 +174,13 @@ export const deleteVideo = async (req: Request, res: Response) => {
     }
 
     try {
-          await fs.unlink(video.filepath);
-          res.status(200).json({ message: 'Video deleted successfully' });
-        } catch (err: any) {
-          res
-            .status(500)
-            .json({ error: 'Failed to delete video file', details: err.message });
-        }
+      await fs.unlink(video.filepath);
+      res.status(200).json({ message: 'Video deleted successfully' });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: 'Failed to delete video file', details: err.message });
+    }
   } catch (error: any) {
     res
       .status(500)
@@ -236,8 +236,8 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const videos = await Video.find({ user: id })
-      .populate("user", "username")
-      .populate("tags", "name")
+      .populate('user', 'username')
+      .populate('tags', 'name')
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments({ user: id });
@@ -253,6 +253,7 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
       .json({ error: 'Failed to fetch user videos', details: error.message });
   }
 };
+
 export const getVideosByTag = async (req: Request, res: Response) => {
   try {
     const { tag } = req.params;
@@ -264,8 +265,8 @@ export const getVideosByTag = async (req: Request, res: Response) => {
     }
 
     const videos = await Video.find({ tags: tagDoc._id })
-      .populate("user", "username")
-      .populate("tags", "name")
+      .populate('user', 'username')
+      .populate('tags', 'name')
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments({ tags: tagDoc._id });
@@ -293,7 +294,9 @@ export const searchVideos = async (req: Request, res: Response) => {
     }
 
     if (tags) {
-      searchQuery.tags = { $in: (tags as string).split(',').map(tag => tag.trim()) };
+      searchQuery.tags = {
+        $in: (tags as string).split(',').map((tag) => tag.trim()),
+      };
     }
 
     const videos = await Video.find(searchQuery)
@@ -310,5 +313,45 @@ export const searchVideos = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: 'Failed to search videos', details: error.message });
+  }
+};
+
+export const likeVideo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    video.likes = (video.likes || 0) + 1;
+    await video.save();
+
+    res.json({ message: 'Video liked successfully', likes: video.likes });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to like video', details: error.message });
+  }
+};
+
+export const dislikeVideo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    video.dislikes = (video.dislikes || 0) + 1;
+    await video.save();
+
+    res.json({ message: 'Video disliked successfully', dislikes: video.dislikes });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to dislike video', details: error.message });
   }
 };

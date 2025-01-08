@@ -69,7 +69,7 @@ describe('POST /api/videos/upload', () => {
       .field('duration', '120')
       .field('tags', 'tag1, tag2, tag3')
       .attach('video', 'uploads/videos/test_video.mp4');
-    
+
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('title', 'Test Video');
     expect(response.body).toHaveProperty('filename');
@@ -242,7 +242,7 @@ describe('GET /api/videos/user/:id', () => {
       user: user._id,
     });
     await video2.save();
-    
+
     const response = await request(app).get(
       `/api/videos/user/${user._id.toString()}`,
     );
@@ -351,5 +351,82 @@ describe('GET /api/videos/search', () => {
     expect(response.body.videos).toHaveLength(2);
     expect(response.body.videos[0]).toHaveProperty('tags');
     expect(response.body.videos[1]).toHaveProperty('tags');
+  });
+});
+
+// Test the like video endpoint
+describe('POST /api/videos/like/:id', () => {
+  it('should like a video', async () => {
+    const user: any = new User({
+      username: 'testuser',
+      email: 'testuser@example.com',
+      password: 'password123',
+      role: 'user',
+    });
+    await user.save();
+
+    const video = new Video({
+      title: 'Test Video',
+      description: 'Test Description',
+      filename: 'Test_Video-uuid.mp4',
+      filepath: 'uploads/videos/Test_Video-uuid.mp4',
+      size: 12345,
+      mimetype: 'video/mp4',
+      duration: 120,
+      user: user._id,
+      likes: 0,
+      dislikes: 0,
+    });
+    await video.save();
+
+    const response = await request(app).post(
+      `/api/videos/like/${video._id}`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('message', 'Video liked successfully');
+
+    const updatedVideo = await Video.findById(video._id);
+    expect(updatedVideo?.likes).toBe(1);
+  });
+});
+
+// Test the dislike video endpoint
+describe('POST /api/videos/dislike/:id', () => {
+  it('should dislike a video', async () => {
+    const user: any = new User({
+      username: 'testuser',
+      email: 'testuser@example.com',
+      password: 'password123',
+      role: 'user',
+    });
+    await user.save();
+
+    const video = new Video({
+      title: 'Test Video',
+      description: 'Test Description',
+      filename: 'Test_Video-uuid.mp4',
+      filepath: 'uploads/videos/Test_Video-uuid.mp4',
+      size: 12345,
+      mimetype: 'video/mp4',
+      duration: 120,
+      user: user._id,
+      likes: 0,
+      dislikes: 0,
+    });
+    await video.save();
+
+    const response = await request(app).post(
+      `/api/videos/dislike/${video._id}`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty(
+      'message',
+      'Video disliked successfully',
+    );
+
+    const updatedVideo = await Video.findById(video._id);
+    expect(updatedVideo?.dislikes).toBe(1);
   });
 });
