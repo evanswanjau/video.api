@@ -24,12 +24,15 @@ const authenticateUser = async (email: string, password: string) => {
 const seedDatabase = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI || '');
+    console.log('Connected to MongoDB');
 
     // Clear existing data
+    console.log('Clearing existing data...');
     await User.deleteMany({});
     await Tag.deleteMany({});
     await Video.deleteMany({});
     await Comment.deleteMany({});
+    console.log('Existing data cleared');
 
     const user = {
       username: 'evanswanjau',
@@ -38,15 +41,19 @@ const seedDatabase = async () => {
       role: 'admin',
     };
 
+    console.log('Creating admin user...');
     await axios.post(`${API_BASE_URL}/users/signup`, user);
+    console.log('Admin user created');
 
     const token = await authenticateUser(user.email, user.password);
+    console.log('Authenticated admin user');
 
     const headers = {
       Authorization: `Bearer ${token}`,
     };
 
     // Create users
+    console.log('Creating users...');
     const users = [];
     for (let i = 0; i < 20; i++) {
       const user = {
@@ -60,8 +67,10 @@ const seedDatabase = async () => {
       });
       users.push(response.data);
     }
+    console.log('Users created');
 
     // Create tags
+    console.log('Creating tags...');
     const tags = [];
     for (let i = 0; i < 10; i++) {
       const tag = { name: faker.lorem.word() };
@@ -70,8 +79,10 @@ const seedDatabase = async () => {
       });
       tags.push(response.data);
     }
+    console.log('Tags created');
 
     // Create videos
+    console.log('Creating videos...');
     const videos = [];
     const videoFiles = fs.readdirSync('uploads/downloads');
 
@@ -109,8 +120,10 @@ const seedDatabase = async () => {
       );
       videos.push(response.data);
     }
+    console.log('Videos created');
 
     // Create comments and replies
+    console.log('Creating comments and replies...');
     for (const video of videos) {
       for (let i = 0; i < 20; i++) {
         const comment = {
@@ -136,6 +149,7 @@ const seedDatabase = async () => {
         }
       }
     }
+    console.log('Comments and replies created');
 
     console.log('Database seeded successfully');
     process.exit(0);
