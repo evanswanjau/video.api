@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
-import { ITag } from "./Tag";
-import { IComment } from "./Comment";
+import mongoose, { Document, Schema } from 'mongoose';
+import { ITag } from './Tag';
+import { IComment } from './Comment';
 
 interface IVideo extends Document {
   title: string;
@@ -12,9 +12,10 @@ interface IVideo extends Document {
   status: string;
   duration: number;
   user: mongoose.Schema.Types.ObjectId;
-  tags: ITag["_id"][];
-  comments: IComment["_id"][];
+  tags: ITag['_id'][];
+  comments: IComment['_id'][];
   thumbnail: string;
+  views: number;
   likes: number;
   dislikes: number;
   createdAt: Date;
@@ -54,8 +55,8 @@ const videoSchema: Schema = new Schema<IVideo>(
     status: {
       type: String,
       required: true,
-      enum: ["pending", "active", "suspended"],
-      default: "pending",
+      enum: ['pending', 'active', 'suspended'],
+      default: 'pending',
     },
     duration: {
       type: Number,
@@ -63,12 +64,16 @@ const videoSchema: Schema = new Schema<IVideo>(
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
-    tags: [{ type: mongoose.Types.ObjectId, ref: "Tag" }],
-    comments: [{ type: mongoose.Types.ObjectId, ref: "Comment" }],
+    tags: [{ type: mongoose.Types.ObjectId, ref: 'Tag' }],
+    comments: [{ type: mongoose.Types.ObjectId, ref: 'Comment' }],
     thumbnail: { type: String },
+    views: {
+      type: Number,
+      default: 0,
+    },
     likes: {
       type: Number,
       default: 0,
@@ -80,10 +85,10 @@ const videoSchema: Schema = new Schema<IVideo>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Create a Model.
-const Video = mongoose.model<IVideo>("Video", videoSchema);
+const Video = mongoose.model<IVideo>('Video', videoSchema);
 
 export default Video;

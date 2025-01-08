@@ -220,6 +220,9 @@ export const getVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    video.views = (video.views || 0) + 1;
+    await video.save();
+
     res.json(video);
   } catch (error: any) {
     res
