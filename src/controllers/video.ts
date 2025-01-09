@@ -355,3 +355,43 @@ export const dislikeVideo = async (req: Request, res: Response) => {
       .json({ error: 'Failed to dislike video', details: error.message });
   }
 };
+
+export const unlikeVideo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    video.likes = Math.max((video.likes || 0) - 1, 0);
+    await video.save();
+
+    res.json({ message: 'Video unliked successfully', likes: video.likes });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to unlike video', details: error.message });
+  }
+};
+
+export const undislikeVideo = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    video.dislikes = Math.max((video.dislikes || 0) - 1, 0);
+    await video.save();
+
+    res.json({ message: 'Video undisliked successfully', dislikes: video.dislikes });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to undislike video', details: error.message });
+  }
+};

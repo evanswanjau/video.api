@@ -12,6 +12,8 @@ import {
   searchVideos,
   likeVideo,
   dislikeVideo,
+  unlikeVideo,
+  undislikeVideo,
 } from '../controllers/video';
 import { authenticate } from '../middleware/auth';
 
@@ -27,5 +29,7 @@ router.get('/:id', getVideo);
 router.get('/tag/:tag', getVideosByTag);
 router.post('/like/:id', likeVideo);
 router.post('/dislike/:id', dislikeVideo);
+router.post('/unlike/:id', unlikeVideo);
+router.post('/undislike/:id', undislikeVideo);
 
 export default router;
