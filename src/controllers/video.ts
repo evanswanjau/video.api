@@ -190,7 +190,7 @@ export const deleteVideo = async (req: Request, res: Response) => {
 
 export const getAllVideos = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 24 } = req.query;
     const videos = await Video.find()
       .populate('user', 'username')
       .populate('tags', 'name')
@@ -286,7 +286,7 @@ export const getVideosByTag = async (req: Request, res: Response) => {
 
 export const searchVideos = async (req: Request, res: Response) => {
   try {
-    const { query, tags, page = 1, limit = 20 } = req.query;
+    const { query, tags, page = 1, limit = 24 } = req.query;
     const searchQuery: any = {};
 
     if (query) {
