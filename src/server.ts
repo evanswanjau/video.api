@@ -7,6 +7,7 @@ import videoRoutes from './routes/video';
 import userRoutes from './routes/user';
 import tagRoutes from './routes/tag';
 import commentRoutes from './routes/comment';
+import { exec } from 'child_process';
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ const port = process.env.PORT || 8000;
 // Middleware to parse JSON
 app.use(express.json());
 app.use(cors());
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Connect to MongoDB Atlas
 const mongoUri = process.env.MONGO_URI || '';
@@ -27,6 +28,19 @@ mongoose
 
 app.get('/', (req, res) => {
   res.send('Server is running successfully');
+});
+
+app.get('/deploy-dev', (req, res) => {
+  exec('bash deploy_dev.sh', (error, stdout, stderr) => {
+    if (error) {
+      console.error(`exec error: ${error}`);
+      return;
+    }
+    console.log(`stdout: ${stdout}`);
+    console.error(`stderr: ${stderr}`);
+  });
+
+  res.send({ success: 'Deployed 🚀' });
 });
 
 app.use('/api/videos/', videoRoutes);
