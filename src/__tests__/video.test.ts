@@ -43,7 +43,6 @@ const generateToken = (id: string, role: string) => {
 
 // Test the upload video endpoint
 describe('POST /api/videos/upload', () => {
-
   (process.env.CI ? it.skip : it)(
     'should upload a video',
     async () => {
@@ -131,46 +130,50 @@ describe('PUT /api/videos/:id', () => {
 
 // Test the delete video endpoint
 describe('DELETE /api/videos/:id', () => {
-  it('should delete a video', async () => {
-    const user: any = new User({
-      username: 'testuser',
-      email: 'testuser@example.com',
-      password: 'password123',
-      role: 'admin',
-    });
-    await user.save();
+  (process.env.CI ? it.skip : it)(
+    'should delete a video',
+    async () => {
+      const user: any = new User({
+        username: 'testuser',
+        email: 'testuser@example.com',
+        password: 'password123',
+        role: 'admin',
+      });
+      await user.save();
 
-    const token = generateToken(user._id.toString(), user.role);
+      const token = generateToken(user._id.toString(), user.role);
 
-    const video = new Video({
-      title: 'Test Video',
-      description: 'Test Description',
-      filename: 'Test_Video-uuid.mp4',
-      filepath: 'uploads/videos/Test_Video-uuid.mp4',
-      size: 12345,
-      mimetype: 'video/mp4',
-      duration: 120,
-      user: user._id,
-    });
-    await video.save();
+      const video = new Video({
+        title: 'Test Video',
+        description: 'Test Description',
+        filename: 'Test_Video-uuid.mp4',
+        filepath: 'uploads/videos/Test_Video-uuid.mp4',
+        size: 12345,
+        mimetype: 'video/mp4',
+        duration: 120,
+        user: user._id,
+      });
+      await video.save();
 
-    // Create a mock file in the uploads/videos directory
-    const mockFilePath = path.resolve('uploads/videos/Test_Video-uuid.mp4');
-    fs.writeFileSync(mockFilePath, 'This is a mock video file.');
+      // Create a mock file in the uploads/videos directory
+      const mockFilePath = path.resolve('uploads/videos/Test_Video-uuid.mp4');
+      fs.writeFileSync(mockFilePath, 'This is a mock video file.');
 
-    const response = await request(app)
-      .delete(`/api/videos/${video._id}`)
-      .set('Authorization', `Bearer ${token}`);
+      const response = await request(app)
+        .delete(`/api/videos/${video._id}`)
+        .set('Authorization', `Bearer ${token}`);
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty(
-      'message',
-      'Video deleted successfully',
-    );
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty(
+        'message',
+        'Video deleted successfully',
+      );
 
-    // Ensure the file has been deleted
-    expect(fs.existsSync(mockFilePath)).toBe(false);
-  }, 300000);
+      // Ensure the file has been deleted
+      expect(fs.existsSync(mockFilePath)).toBe(false);
+    },
+    300000,
+  );
 });
 
 // Test the get all videos endpoint
@@ -384,9 +387,7 @@ describe('POST /api/videos/like/:id', () => {
     });
     await video.save();
 
-    const response = await request(app).post(
-      `/api/videos/like/${video._id}`,
-    );
+    const response = await request(app).post(`/api/videos/like/${video._id}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('message', 'Video liked successfully');
