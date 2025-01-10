@@ -24,23 +24,43 @@ jobs:
           cache: 'npm'
       - name: Install Volta (Optional)
         uses: volta-cli/action@v1
+      - name: Create env files
+        run: |
+          # Create default .env file
+          touch .env
+          echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+          echo "PORT=${{ secrets.PORT }}" >> .env
+          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >> .env
+          echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> .env
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env
+          echo "EMAIL_PASS=${{ secrets.EMAIL_PASS }}" >> .env
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
+          
+          # Create test .env file
+          touch .env.test
+          echo "NODE_ENV=${{ secrets.TEST_NODE_ENV }}" >>  .env.test
+          echo "PORT=${{ secrets.TEST_PORT }}" >> .env.test
+          echo "MONGO_URI=${{ secrets.TEST_MONGO_URI }}" >> .env.test
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.test
+          echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >> .env.test
+          echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> .env.test
+          echo "EMAIL_FROM=${{ secrets.EMAIL_FROM }}" >> .env.test
+          echo "EMAIL_PASS=${{ secrets.EMAIL_PASS }}" >> .env.test
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env.test
       - name: Install dependencies
         run: npm ci
-        env:
-          NODE_ENV: ${{ secrets.NODE_ENV }}
-          PORT: ${{ secrets.PORT }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          BASE_URL: ${{ secrets.BASE_URL }}
       - name: Lint the code
-        run: npm run lint --if-present
+        run: npm run lint
       - name: Build the project
-        run: npm run build --if-present
-      - name: Run tests
-        run: npm run test
+        run: npm run build
+      - name: Load env.test and run tests
+        run: |
+          # Load environment variables from .env.test
+          if [ -f .env.test ]; then
+            export $(cat .env.test | xargs)
+          fi
+          npm run test
         env:
           CI: true
