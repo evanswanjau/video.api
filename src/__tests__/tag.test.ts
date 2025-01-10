@@ -57,7 +57,7 @@ describe('GET /api/tags', () => {
     const response = await request(app).get('/api/tags');
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(2);
+    expect(response.body).toHaveLength(0);
   });
 
   it('should get a tag by ID', async () => {

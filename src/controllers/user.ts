@@ -86,9 +86,10 @@ export const changePassword = async (req: Request, res: Response) => {
     await user.save();
 
     res.json({ message: 'Your password has been updated successfully.' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while processing your request.',
+      error: 'An unexpected error occurred while processing your request.',
+      details: error.message,
     });
   }
 };
@@ -146,9 +147,10 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(200).json({
       message: 'Your password has been reset successfully.',
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while resetting the password.',
+      error: 'An unexpected error occurred while resetting the password.',
+      details: error.message,
     });
   }
 };
@@ -170,13 +172,15 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userData } = req.body;
     await user.set(userData).save();
 
     res.json({ message: 'Your profile has been updated successfully.' });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while processing your request.',
+      error: 'An unexpected error occurred while processing your request.',
+      details: error.message,
     });
   }
 };
@@ -203,9 +207,10 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(200).json({
       message: 'User has been deleted successfully.',
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while deleting the user.',
+      error: 'An unexpected error occurred while deleting the user.',
+      details: error.message,
     });
   }
 };
@@ -228,9 +233,10 @@ export const myAccount = async (req: Request, res: Response) => {
     }
 
     res.status(200).json(user);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while fetching the user.',
+      error: 'An unexpected error occurred while fetching the user.',
+      details: error.message,
     });
   }
 };
@@ -253,9 +259,10 @@ export const viewByID = async (req: Request, res: Response) => {
     }
 
     res.status(200).json(user);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message: 'An unexpected error occurred while fetching the user.',
+      error: 'An unexpected error occurred while fetching the user.',
+      details: error.message,
     });
   }
 };
@@ -297,10 +304,11 @@ export const searchUsers = async (req: Request, res: Response) => {
 
     const users = await User.find(query);
     res.status(200).json(users);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
-      message:
+      error:
         'An unexpected error occurred while searching and filtering users.',
+      details: error.message,
     });
   }
 };

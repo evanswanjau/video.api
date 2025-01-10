@@ -259,9 +259,9 @@ describe('Comment API', () => {
     const response = await request(app).get(`/api/comments/video/${video._id}`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(2);
-    expect(response.body[0]).toHaveProperty('content', 'Comment 1');
-    expect(response.body[1]).toHaveProperty('content', 'Comment 2');
+    expect(response.body.comments).toHaveLength(2);
+    expect(response.body.comments[0]).toHaveProperty('content', 'Comment 1');
+    expect(response.body.comments[1]).toHaveProperty('content', 'Comment 2');
   });
 
   it('should get replies for a comment', async () => {
@@ -315,8 +315,8 @@ describe('Comment API', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(2);
-    expect(response.body[0]).toHaveProperty('content', 'Reply 1');
-    expect(response.body[1]).toHaveProperty('content', 'Reply 2');
+    expect(response.body.replies).toHaveLength(2);
+    expect(response.body.replies[0]).toHaveProperty('content', 'Reply 1');
+    expect(response.body.replies[1]).toHaveProperty('content', 'Reply 2');
   });
 });

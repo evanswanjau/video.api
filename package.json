@@ -1,13 +1,15 @@
 {
   "name": "video.api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node dist/server.js",
     "dev": "nodemon --files -r dotenv/config src/server.ts dotenv_config_path=.env",
     "test": "cross-env dotenv_config_path=.env.test jest --env=node --runInBand --config=jest.config.js --setupFiles dotenv/config",
     "build": "tsc --outDir dist",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "seed": "ts-node src/scripts/seed.ts"
   },
   "keywords": [],
@@ -39,8 +41,8 @@
     "@types/nodemailer": "^6.4.17",
     "@types/supertest": "^6.0.2",
     "@types/thumbsupply": "^0.4.2",
-    "@typescript-eslint/eslint-plugin": "^8.18.1",
-    "@typescript-eslint/parser": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",

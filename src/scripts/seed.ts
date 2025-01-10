@@ -64,7 +64,7 @@ const seedDatabase = async () => {
     };
 
     console.log('Creating admin user...');
-    const adminResponse = await axios.post(
+    await axios.post(
       `${API_BASE_URL}/users/signup`,
       adminUser,
     );
