@@ -7,7 +7,8 @@ import thumbsupply from 'thumbsupply';
 import Video from '../models/Video';
 import Tag from '../models/Tag';
 import WatchHistory from '../models/WatchHistory';
-import moment from 'moment'; // Import moment.js for date formatting
+import moment from 'moment';
+import SavedVideo from '../models/SavedVideo';
 
 interface MulterRequest extends Request {
   file: Express.Multer.File;
@@ -478,5 +479,102 @@ export const cleanupWatchHistory = async () => {
     console.log('Old watch history entries deleted successfully.');
   } catch (error: any) {
     console.error('Failed to clean up watch history:', error.message);
+  }
+};
+
+export const saveVideo = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
+  try {
+    const { videoId } = req.body;
+
+    const existingEntry = await SavedVideo.findOne({
+      user: req.userId,
+      video: videoId,
+    });
+
+    if (existingEntry) {
+      return res
+        .status(400)
+        .json({ message: 'Video is already saved to watch later.' });
+    }
+
+    const savedVideoEntry = new SavedVideo({
+      user: req.userId,
+      video: videoId,
+    });
+    await savedVideoEntry.save();
+
+    res.status(201).json({ message: 'Video saved to watch later.' });
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Failed to save video to watch later',
+      details: error.message,
+    });
+  }
+};
+
+export const removeSavedVideo = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
+  try {
+    const { videoId } = req.body;
+
+    const result = await SavedVideo.findOneAndDelete({
+      user: req.userId,
+      video: videoId,
+    });
+
+    if (!result) {
+      return res.status(404).json({ message: 'Saved video not found.' });
+    }
+
+    res.status(200).json({ message: 'Saved video removed successfully.' });
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Failed to remove saved video',
+      details: error.message,
+    });
+  }
+};
+
+export const getSavedVideos = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const savedVideos = await SavedVideo.find({ user: req.userId })
+      .populate('video') // Populate video details
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const totalSavedVideos = await SavedVideo.countDocuments({
+      user: req.userId,
+    });
+
+    res.json({
+      savedVideos,
+      total: totalSavedVideos,
+      page: Number(page),
+      pages: Math.ceil(totalSavedVideos / Number(limit)),
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Failed to fetch saved videos',
+      details: error.message,
+    });
   }
 };

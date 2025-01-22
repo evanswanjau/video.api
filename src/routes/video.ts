@@ -16,6 +16,9 @@ import {
   undislikeVideo,
   addToWatchHistory,
   getWatchHistory,
+  saveVideo,
+  removeSavedVideo,
+  getSavedVideos,
 } from '../controllers/video';
 import { authenticate } from '../middleware/auth';
 
@@ -34,6 +37,9 @@ router.post('/unlike/:id', unlikeVideo);
 router.post('/undislike/:id', undislikeVideo);
 router.post('/user/watch-history', authenticate, addToWatchHistory);
 router.get('/user/watch-history', authenticate, getWatchHistory);
+router.post('/user/save-video', authenticate, saveVideo);
+router.delete('/user/save-video', authenticate, removeSavedVideo);
+router.get('/user/save-video', authenticate, getSavedVideos);
 router.get('/user/:id', getVideosByUserID);
 
 export default router;
