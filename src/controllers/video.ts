@@ -6,6 +6,8 @@ import path from 'path';
 import thumbsupply from 'thumbsupply';
 import Video from '../models/Video';
 import Tag from '../models/Tag';
+import WatchHistory from '../models/WatchHistory';
+import moment from 'moment'; // Import moment.js for date formatting
 
 interface MulterRequest extends Request {
   file: Express.Multer.File;
@@ -348,7 +350,10 @@ export const dislikeVideo = async (req: Request, res: Response) => {
     video.dislikes = (video.dislikes || 0) + 1;
     await video.save();
 
-    res.json({ message: 'Video disliked successfully', dislikes: video.dislikes });
+    res.json({
+      message: 'Video disliked successfully',
+      dislikes: video.dislikes,
+    });
   } catch (error: any) {
     res
       .status(500)
@@ -388,10 +393,90 @@ export const undislikeVideo = async (req: Request, res: Response) => {
     video.dislikes = Math.max((video.dislikes || 0) - 1, 0);
     await video.save();
 
-    res.json({ message: 'Video undisliked successfully', dislikes: video.dislikes });
+    res.json({
+      message: 'Video undisliked successfully',
+      dislikes: video.dislikes,
+    });
   } catch (error: any) {
     res
       .status(500)
       .json({ error: 'Failed to undislike video', details: error.message });
+  }
+};
+
+export const addToWatchHistory = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
+  try {
+    const { videoId } = req.body;
+
+    const existingEntry = await WatchHistory.findOne({
+      user: req.userId,
+      video: videoId,
+    });
+
+    if (existingEntry) {
+      existingEntry.watchedAt = new Date();
+      await existingEntry.save();
+      res.status(200).json({ message: 'Watch history updated.' });
+    } else {
+      const historyEntry = new WatchHistory({
+        user: req.userId,
+        video: videoId,
+      });
+      await historyEntry.save();
+      res.status(201).json({ message: 'Video added to watch history.' });
+    }
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Failed to add to watch history',
+      details: error.message,
+    });
+  }
+};
+
+export const getWatchHistory = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
+  try {
+    const history = await WatchHistory.find({ user: req.userId })
+      .populate('video')
+      .sort({ watchedAt: -1 });
+
+    const groupedHistory: Record<string, typeof history> = history.reduce(
+      (acc, entry) => {
+        const dateKey = moment(entry.watchedAt).format('dddd');
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(entry);
+        return acc;
+      },
+      {} as Record<string, typeof history>,
+    );
+
+    res.json(groupedHistory);
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch watch history', details: error.message });
+  }
+};
+
+export const cleanupWatchHistory = async () => {
+  try {
+    const oneMonthAgo = moment().subtract(1, 'months').toDate();
+    await WatchHistory.deleteMany({ watchedAt: { $lt: oneMonthAgo } });
+    console.log('Old watch history entries deleted successfully.');
+  } catch (error: any) {
+    console.error('Failed to clean up watch history:', error.message);
   }
 };

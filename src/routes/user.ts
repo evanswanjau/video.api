@@ -23,8 +23,8 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', authenticate, resetPassword);
 router.put('/', authenticate, updateUser);
 router.delete('/', authenticate, deleteUser);
-router.get('/:id', authenticate, viewByID);
 router.get('/my-account', authenticate, myAccount);
+router.get('/:id', authenticate, viewByID);
 router.get('/search', authenticate, searchUsers);
 
 export default router;

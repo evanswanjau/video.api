@@ -8,6 +8,7 @@ import userRoutes from './routes/user';
 import tagRoutes from './routes/tag';
 import commentRoutes from './routes/comment';
 import { exec } from 'child_process';
+import './scheduler/cleanupScheduler';
 
 dotenv.config();
 
@@ -50,5 +51,5 @@ app.use('/api/comments/', commentRoutes);
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running on port ${port} 🚀`);
+  console.log(`Server is running on poort ${port} 🚀`);
 });
