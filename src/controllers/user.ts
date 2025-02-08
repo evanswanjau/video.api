@@ -28,13 +28,13 @@ export const signUp = async (req: Request, res: Response) => {
       },
     );
 
-    const activationLink = `${process.env.BASE_URL}/activate?token=${token}`;
+    // const activationLink = `${process.env.BASE_URL}/activate?token=${token}`;
 
-    await sendEmail(
-      user.email,
-      'Welcome to Our Service!',
-      signUpTemplate(user.username, activationLink),
-    );
+    // await sendEmail(
+    //   user.email,
+    //   'Welcome to Our Service!',
+    //   signUpTemplate(user.username, activationLink),
+    // );
 
     res.status(201).json({
       message:

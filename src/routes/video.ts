@@ -19,6 +19,7 @@ import {
   saveVideo,
   removeSavedVideo,
   getSavedVideos,
+  getMyVideos,
 } from '../controllers/video';
 import { authenticate } from '../middleware/auth';
 
@@ -40,6 +41,7 @@ router.get('/user/watch-history', authenticate, getWatchHistory);
 router.post('/user/save-video', authenticate, saveVideo);
 router.delete('/user/save-video', authenticate, removeSavedVideo);
 router.get('/user/save-video', authenticate, getSavedVideos);
+router.get('/user/my-videos', authenticate, getMyVideos);
 router.get('/user/:id', getVideosByUserID);
 
 export default router;

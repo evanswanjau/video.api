@@ -197,6 +197,7 @@ export const getAllVideos = async (req: Request, res: Response) => {
     const videos = await Video.find()
       .populate('user', 'username')
       .populate('tags', 'name')
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments();
@@ -241,9 +242,39 @@ export const getVideosByUserID = async (req: Request, res: Response) => {
     const videos = await Video.find({ user: id })
       .populate('user', 'username')
       .populate('tags', 'name')
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments({ user: id });
+    res.json({
+      videos,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch user videos', details: error.message });
+  }
+};
+
+export const getMyVideos = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+  try {
+    const { page = 1, limit = 12 } = req.query;
+    const videos = await Video.find({ user: req.userId })
+      .populate('user', 'username')
+      .populate('tags', 'name')
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await Video.countDocuments({ user: req.userId });
     res.json({
       videos,
       total,
@@ -270,6 +301,7 @@ export const getVideosByTag = async (req: Request, res: Response) => {
     const videos = await Video.find({ tags: tagDoc._id })
       .populate('user', 'username')
       .populate('tags', 'name')
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments({ tags: tagDoc._id });
@@ -303,6 +335,7 @@ export const searchVideos = async (req: Request, res: Response) => {
     }
 
     const videos = await Video.find(searchQuery)
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
     const total = await Video.countDocuments(searchQuery);
@@ -448,13 +481,24 @@ export const getWatchHistory = async (req: Request, res: Response) => {
   }
 
   try {
+    const { page = 1, limit = 12 } = req.query;
+
     const history = await WatchHistory.find({ user: req.userId })
+      .sort({ watchedAt: -1 })
       .populate('video')
-      .sort({ watchedAt: -1 });
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await WatchHistory.countDocuments({ user: req.userId });
 
     const groupedHistory: Record<string, typeof history> = history.reduce(
       (acc, entry) => {
-        const dateKey = moment(entry.watchedAt).format('dddd');
+        let dateKey = moment(entry.watchedAt).format('dddd');
+        if (moment(entry.watchedAt).isSame(moment(), 'day')) {
+          dateKey = 'Today';
+        } else if (moment(entry.watchedAt).isSame(moment().subtract(1, 'days'), 'day')) {
+          dateKey = 'Yesterday';
+        }
         if (!acc[dateKey]) {
           acc[dateKey] = [];
         }
@@ -464,7 +508,12 @@ export const getWatchHistory = async (req: Request, res: Response) => {
       {} as Record<string, typeof history>,
     );
 
-    res.json(groupedHistory);
+    res.json({
+      history: groupedHistory,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
   } catch (error: any) {
     res
       .status(500)
@@ -554,10 +603,11 @@ export const getSavedVideos = async (req: Request, res: Response) => {
   }
 
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 12 } = req.query;
 
     const savedVideos = await SavedVideo.find({ user: req.userId })
-      .populate('video') // Populate video details
+      .populate('video')
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
 
@@ -566,7 +616,7 @@ export const getSavedVideos = async (req: Request, res: Response) => {
     });
 
     res.json({
-      savedVideos,
+      videos: savedVideos.map((item) => item.video),
       total: totalSavedVideos,
       page: Number(page),
       pages: Math.ceil(totalSavedVideos / Number(limit)),
