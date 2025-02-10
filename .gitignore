@@ -66,3 +66,4 @@ build/
 # Windows files
 Thumbs.dbnode_modules
 .vercel
+documentation/
