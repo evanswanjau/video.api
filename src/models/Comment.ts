@@ -20,4 +20,6 @@ const CommentSchema: Schema = new Schema({
   timestamps: true,
 });
 
+CommentSchema.index({ video: 1, createdAt: -1 });
+
 export default mongoose.model<IComment>('Comment', CommentSchema);

@@ -9,7 +9,7 @@ interface IVideo extends Document {
   filepath: string;
   size: number;
   mimetype: string;
-  status: string;
+  status: 'draft' | 'scheduled' | 'published' | 'review' | 'suspended';
   duration: number;
   user: mongoose.Schema.Types.ObjectId;
   tags: ITag['_id'][];
@@ -18,6 +18,9 @@ interface IVideo extends Document {
   views: number;
   likes: number;
   dislikes: number;
+  scheduledFor?: Date;
+  publishedAt?: Date;
+  visibility: 'public' | 'private' | 'unlisted';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,8 +58,8 @@ const videoSchema: Schema = new Schema<IVideo>(
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'active', 'suspended'],
-      default: 'pending',
+      enum: ['draft', 'scheduled', 'published', 'review', 'suspended'],
+      default: 'published',
     },
     duration: {
       type: Number,
@@ -82,13 +85,54 @@ const videoSchema: Schema = new Schema<IVideo>(
       type: Number,
       default: 0,
     },
+    scheduledFor: {
+      type: Date,
+      validate: {
+        validator: function (this: IVideo, value: Date) {
+          if (this.status !== 'scheduled') return true;
+          return value && value > new Date();
+        },
+        message: 'Scheduled date must be in the future',
+      },
+    },
+    publishedAt: {
+      type: Date,
+      default: function (this: IVideo) {
+        return this.status === 'published' ? new Date() : null;
+      },
+    },
+    visibility: {
+      type: String,
+      enum: ['public', 'private', 'unlisted'],
+      default: 'public',
+    },
   },
   {
     timestamps: true,
   },
 );
 
-// Create a Model.
+videoSchema.index({ isScheduled: 1, scheduledFor: 1 });
+
+videoSchema.pre('save', function (next) {
+  if (this.status === 'scheduled' && this.scheduledFor) {
+    this.publishedAt = null;
+  } else if (this.status === 'published' && !this.publishedAt) {
+    this.publishedAt = new Date();
+  }
+  next();
+});
+
+videoSchema.virtual('isReadyToPublish').get(function (this: IVideo) {
+  return (
+    this.status === 'scheduled' &&
+    this.scheduledFor &&
+    new Date() >= this.scheduledFor
+  );
+});
+
+videoSchema.index({ title: 'text', description: 'text' });
+
 const Video = mongoose.model<IVideo>('Video', videoSchema);
 
 export default Video;

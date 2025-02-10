@@ -17,7 +17,6 @@ const SavedVideoSchema: Schema = new Schema(
   },
 );
 
-// Ensure unique combination of user and video
 SavedVideoSchema.index({ user: 1, video: 1 }, { unique: true });
 
 const SavedVideo = mongoose.model<ISavedVideo>('SavedVideo', SavedVideoSchema);
