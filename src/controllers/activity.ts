@@ -66,3 +66,36 @@ export const logActivity = async (
     console.error('Failed to log activity:', error);
   }
 };
+
+export const getVideoActivities = async (req: Request, res: Response) => {
+  try {
+    const { videoId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const activities = await Activity.find({
+      targetId: videoId,
+      type: { $in: ['video', 'comment'] },
+    })
+      .populate('user', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await Activity.countDocuments({
+      targetId: videoId,
+      type: { $in: ['video', 'comment'] },
+    });
+
+    res.json({
+      activities,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Failed to fetch video activities',
+      details: error.message,
+    });
+  }
+};

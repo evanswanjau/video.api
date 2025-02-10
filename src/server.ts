@@ -9,6 +9,7 @@ import tagRoutes from './routes/tag';
 import commentRoutes from './routes/comment';
 import dashboardRoutes from './routes/dashboard';
 import reportRoutes from './routes/report';
+import activityRoutes from './routes/activity';
 import { exec } from 'child_process';
 import './scheduler/cleanupScheduler';
 
@@ -49,9 +50,10 @@ app.get('/deploy-dev', (req, res) => {
 app.use('/api/videos/', videoRoutes);
 app.use('/api/users/', userRoutes);
 app.use('/api/tags/', tagRoutes);
-app.use('/api/comments/', commentRoutes); 
+app.use('/api/comments/', commentRoutes);
 app.use('/api/dashboard/', dashboardRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/reports/', reportRoutes);
+app.use('/api/activities/', activityRoutes);
 
 // Start the server
 app.listen(port, () => {
