@@ -20,6 +20,10 @@ import {
   removeSavedVideo,
   getSavedVideos,
   getMyVideos,
+  addVideoView,
+  checkVideoSaved,
+  getVideoViewsStats,
+  getVideoEngagementStats,
 } from '../controllers/video';
 import { authenticate } from '../middleware/auth';
 
@@ -31,6 +35,7 @@ router.delete('/:id', authenticate, deleteVideo);
 router.get('/', getAllVideos);
 router.get('/search', searchVideos);
 router.get('/:id', getVideo);
+router.get('/view/:id', addVideoView);
 router.get('/tag/:tag', getVideosByTag);
 router.post('/like/:id', likeVideo);
 router.post('/dislike/:id', dislikeVideo);
@@ -40,8 +45,11 @@ router.post('/user/watch-history', authenticate, addToWatchHistory);
 router.get('/user/watch-history', authenticate, getWatchHistory);
 router.post('/user/save-video', authenticate, saveVideo);
 router.delete('/user/save-video', authenticate, removeSavedVideo);
+router.get('/user/save-video/:id', authenticate, checkVideoSaved);
 router.get('/user/save-video', authenticate, getSavedVideos);
 router.get('/user/my-videos', authenticate, getMyVideos);
 router.get('/user/:id', getVideosByUserID);
+router.get('/:id/analytics/views', authenticate, getVideoViewsStats);
+router.get('/:id/analytics/engagement', authenticate, getVideoEngagementStats);
 
 export default router;
