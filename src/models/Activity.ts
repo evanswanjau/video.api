@@ -25,16 +25,6 @@ const ActivitySchema = new Schema(
     action: {
       type: String,
       required: true,
-      enum: [
-        'create',
-        'update',
-        'delete',
-        'view',
-        'like',
-        'dislike',
-        'save',
-        'report',
-      ],
     },
     target: {
       type: Schema.Types.ObjectId,

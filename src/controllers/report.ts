@@ -2,10 +2,12 @@ import { Request, Response } from 'express';
 import Report from '../models/Report';
 import Video from '../models/Video';
 import Comment from '../models/Comment';
+import { logActivity } from './activity';
 
 export const reportContent = async (req: Request, res: Response) => {
   try {
     const { contentType, contentId, reason, description } = req.body;
+    const userId = req.userId;
 
     let content;
     if (contentType === 'Video') {
@@ -28,6 +30,14 @@ export const reportContent = async (req: Request, res: Response) => {
     });
 
     await report.save();
+
+    if (userId) {
+      await logActivity(userId, 'report', 'create', contentId, contentType, {
+        reason,
+        description: description?.substring(0, 50),
+        status: 'pending',
+      });
+    }
 
     res.status(201).json({
       message: `${contentType.charAt(0).toUpperCase() + contentType.slice(1)} reported successfully`,
@@ -60,6 +70,13 @@ export const getReports = async (req: Request, res: Response) => {
       .skip((Number(page) - 1) * Number(limit));
 
     const total = await Report.countDocuments(query);
+
+    await logActivity(req.userId!, 'report', 'view', 'reports', 'Report', {
+      filters: { status, contentType },
+      page: Number(page),
+      limit: Number(limit),
+      totalReports: total,
+    });
 
     res.json({
       reports,

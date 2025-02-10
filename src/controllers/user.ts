@@ -5,6 +5,8 @@ import User from '../models/User';
 import { sendEmail } from '../services/email';
 import { resetPasswordTemplate } from '../templates/users/resetPassword';
 import { signUpTemplate } from '../templates/users/signup';
+import { logActivity } from './activity';
+import { ObjectId } from 'mongoose';
 
 // SignUp
 export const signUp = async (req: Request, res: Response) => {
@@ -20,6 +22,11 @@ export const signUp = async (req: Request, res: Response) => {
     const user = new User({ ...req.body, password: hashedPassword });
     await user.save();
 
+    const userId = (user._id as ObjectId).toString();
+    await logActivity(userId, 'user', 'signup', userId, 'User', {
+      email: user.email,
+    });
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET as string,
@@ -28,13 +35,13 @@ export const signUp = async (req: Request, res: Response) => {
       },
     );
 
-    // const activationLink = `${process.env.BASE_URL}/activate?token=${token}`;
+    const activationLink = `${process.env.BASE_URL}/activate?token=${token}`;
 
-    // await sendEmail(
-    //   user.email,
-    //   'Welcome to Our Service!',
-    //   signUpTemplate(user.username, activationLink),
-    // );
+    await sendEmail(
+      user.email,
+      'Welcome to Our Service!',
+      signUpTemplate(user.username, activationLink),
+    );
 
     res.status(201).json({
       message:
@@ -47,23 +54,37 @@ export const signUp = async (req: Request, res: Response) => {
 
 // SignIn
 export const signIn = async (req: Request, res: Response) => {
-  const user = await User.findOne({ email: req.body.email });
+  try {
+    const user = await User.findOne({ email: req.body.email });
 
-  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-    return res.status(401).json({
-      message: 'The provided credentials are invalid.',
+    if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+      return res.status(401).json({
+        message: 'The provided credentials are invalid.',
+      });
+    }
+
+    const userId = (user._id as ObjectId).toString();
+    await logActivity(userId, 'user', 'login', userId, 'User', {
+      email: user.email,
     });
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET as string,
+      {
+        expiresIn: '24d',
+      },
+    );
+
+    res.json({ token });
+  } catch (error: any) {
+    res
+      .status(401)
+      .json({
+        message: 'The provided credentials are invalid.',
+        details: error.message,
+      });
   }
-
-  const token = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET as string,
-    {
-      expiresIn: '24d',
-    },
-  );
-
-  res.json({ token });
 };
 
 // Change Password
@@ -84,6 +105,17 @@ export const changePassword = async (req: Request, res: Response) => {
 
     user.password = await bcrypt.hash(req.body.newPassword, 10);
     await user.save();
+
+    await logActivity(
+      req.userId!,
+      'user',
+      'change_password',
+      req.userId!,
+      'User',
+      {
+        timestamp: new Date(),
+      },
+    );
 
     res.json({ message: 'Your password has been updated successfully.' });
   } catch (error: any) {
@@ -176,6 +208,10 @@ export const updateUser = async (req: Request, res: Response) => {
     const { password, ...userData } = req.body;
     await user.set(userData).save();
 
+    await logActivity(req.userId!, 'user', 'update', req.userId!, 'User', {
+      updates: Object.keys(userData),
+    });
+
     res.json({ message: 'Your profile has been updated successfully.' });
   } catch (error: any) {
     res.status(500).json({
@@ -203,6 +239,10 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
 
     await User.deleteOne({ _id: req.userId });
+
+    await logActivity(req.userId!, 'user', 'delete', req.userId!, 'User', {
+      timestamp: new Date(),
+    });
 
     res.status(200).json({
       message: 'User has been deleted successfully.',

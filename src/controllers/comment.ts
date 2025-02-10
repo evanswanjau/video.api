@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
-import Comment from '../models/Comment';
+import { ObjectId } from 'mongoose';
+import Comment, { IComment } from '../models/Comment';
 import Video from '../models/Video';
+import { logActivity } from './activity';
 
 export const addComment = async (req: Request, res: Response) => {
   if (!req.userId || req.role !== 'admin') {
@@ -17,13 +19,19 @@ export const addComment = async (req: Request, res: Response) => {
       user: userId,
       video: videoId,
       parentComment: parentCommentId || null,
-    });
+    }) as IComment;
 
     await comment.save();
 
-    // Add comment to the video
     await Video.findByIdAndUpdate(videoId, {
       $push: { comments: comment._id },
+    });
+
+    const commentId = (comment._id as ObjectId).toString();
+    await logActivity(userId, 'comment', 'create', commentId, 'Comment', {
+      videoId,
+      parentCommentId: parentCommentId || null,
+      content: content.substring(0, 50),
     });
 
     res.status(201).json(comment);
@@ -54,6 +62,11 @@ export const updateComment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
+    await logActivity(req.userId, 'comment', 'update', id, 'Comment', {
+      videoId: comment.video,
+      newContent: content.substring(0, 50),
+    });
+
     res.json(comment);
   } catch (error: any) {
     res
@@ -77,9 +90,13 @@ export const deleteComment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // Remove comment from the video
     await Video.findByIdAndUpdate(comment.video, {
       $pull: { comments: comment._id },
+    });
+
+    await logActivity(req.userId, 'comment', 'delete', id, 'Comment', {
+      videoId: comment.video,
+      role: req.role,
     });
 
     res.status(200).json({ message: 'Comment deleted successfully' });
@@ -104,6 +121,14 @@ export const getCommentsByVideo = async (req: Request, res: Response) => {
       video: videoId,
       parentComment: null,
     });
+
+    if (req.userId) {
+      await logActivity(req.userId, 'comment', 'view', videoId, 'Video', {
+        page: Number(page),
+        limit: Number(limit),
+        totalComments,
+      });
+    }
 
     res.json({
       comments,
@@ -131,6 +156,21 @@ export const getRepliesByComment = async (req: Request, res: Response) => {
     const totalReplies = await Comment.countDocuments({
       parentComment: commentId,
     });
+
+    if (req.userId) {
+      await logActivity(
+        req.userId,
+        'comment',
+        'view_replies',
+        commentId,
+        'Comment',
+        {
+          page: Number(page),
+          limit: Number(limit),
+          totalReplies,
+        },
+      );
+    }
 
     res.json({
       replies,

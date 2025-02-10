@@ -14,6 +14,7 @@ import { getDateRange } from './dashboard';
 import Comment from '../models/Comment';
 import VideoView from '../models/VideoView';
 import VideoLike from '../models/VideoLike';
+import { logActivity } from '../controllers/activity';
 
 interface MulterRequest extends Request {
   file: Express.Multer.File;
@@ -104,6 +105,11 @@ export const handleUpload = async (req: MulterRequest, res: Response) => {
 
     await video.save();
 
+    // Log the upload activity
+    await logActivity(req.userId, 'video', 'create', video._id, 'Video', {
+      title: video.title,
+    });
+
     // Generate thumbnail
     try {
       const thumbnailPath = await generateThumbnail(
@@ -157,6 +163,12 @@ export const updateVideo = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    // Log the update activity
+    await logActivity(req.userId, 'video', 'update', id, 'Video', {
+      updates: updateData,
+      role: req.role,
+    });
+
     res.json(video);
   } catch (error: any) {
     res
@@ -183,6 +195,10 @@ export const deleteVideo = async (req: Request, res: Response) => {
 
     try {
       await fs.unlink(video.filepath);
+      // Log the delete activity
+      await logActivity(req.userId, 'video', 'delete', id, 'Video', {
+        role: req.role,
+      });
       res.status(200).json({ message: 'Video deleted successfully' });
     } catch (err: any) {
       res
@@ -245,6 +261,9 @@ export const addVideoView = async (req: Request, res: Response) => {
         user: userId,
         video: id,
         watchedAt: new Date(),
+      });
+      await logActivity(userId, 'video', 'view', id, 'Video', {
+        deviceId: req.headers['user-agent'],
       });
     }
 
@@ -419,6 +438,10 @@ export const likeVideo = async (req: Request, res: Response) => {
         video.likes = Math.max((video.likes || 0) - 1, 0);
         await video.save();
 
+        if (userId) {
+          await logActivity(userId, 'video', 'unlike', id, 'Video');
+        }
+
         return res.json({
           message: 'Like removed successfully',
           likes: video.likes,
@@ -435,6 +458,14 @@ export const likeVideo = async (req: Request, res: Response) => {
       video.likes = (video.likes || 0) + 1;
       video.dislikes = Math.max((video.dislikes || 0) - 1, 0);
       await video.save();
+
+      if (userId) {
+        await logActivity(userId, 'video', 'like', id, 'Video', {
+          deviceId,
+          ipAddress,
+          action: 'changed',
+        });
+      }
 
       return res.json({
         message: 'Changed to like successfully',
@@ -456,11 +487,18 @@ export const likeVideo = async (req: Request, res: Response) => {
     video.likes = (video.likes || 0) + 1;
     await video.save();
 
+    if (userId) {
+      await logActivity(userId, 'video', 'like', id, 'Video', {
+        deviceId,
+        ipAddress,
+        action: 'added',
+      });
+    }
+
     res.json({
       message: 'Video liked successfully',
       likes: video.likes,
       dislikes: video.dislikes,
-      action: 'added',
     });
   } catch (error: any) {
     if (error.code === 11000) {
@@ -505,6 +543,10 @@ export const unlikeVideo = async (req: Request, res: Response) => {
 
     video.likes = Math.max((video.likes || 0) - 1, 0);
     await video.save();
+
+    if (req.userId) {
+      await logActivity(req.userId, 'video', 'unlike', id, 'Video');
+    }
 
     res.json({
       message: 'Video unliked successfully',
@@ -583,6 +625,11 @@ export const addToWatchHistory = async (req: Request, res: Response) => {
     if (existingEntry) {
       existingEntry.watchedAt = new Date();
       await existingEntry.save();
+
+      await logActivity(req.userId, 'video', 'watch', videoId, 'Video', {
+        action: 'updated_watch_time',
+      });
+
       res.status(200).json({ message: 'Watch history updated.' });
     } else {
       const historyEntry = new WatchHistory({
@@ -590,6 +637,11 @@ export const addToWatchHistory = async (req: Request, res: Response) => {
         video: videoId,
       });
       await historyEntry.save();
+
+      await logActivity(req.userId, 'video', 'watch', videoId, 'Video', {
+        action: 'first_watch',
+      });
+
       res.status(201).json({ message: 'Video added to watch history.' });
     }
   } catch (error: any) {
@@ -687,6 +739,8 @@ export const saveVideo = async (req: Request, res: Response) => {
     });
     await savedVideoEntry.save();
 
+    await logActivity(req.userId, 'video', 'save', videoId, 'Video');
+
     res.status(201).json({ message: 'Video saved to watch later.' });
   } catch (error: any) {
     res.status(500).json({
@@ -714,6 +768,10 @@ export const removeSavedVideo = async (req: Request, res: Response) => {
     if (!result) {
       return res.status(404).json({ message: 'Saved video not found.' });
     }
+
+    await logActivity(req.userId, 'video', 'delete', videoId, 'Video', {
+      action: 'unsave',
+    });
 
     res.status(200).json({ message: 'Saved video removed successfully.' });
   } catch (error: any) {
