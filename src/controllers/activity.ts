@@ -68,6 +68,12 @@ export const logActivity = async (
 };
 
 export const getVideoActivities = async (req: Request, res: Response) => {
+  if (!req.userId) {
+    return res.status(401).json({
+      message: 'You are not authorized to perform this action.',
+    });
+  }
+
   try {
     const { videoId } = req.params;
     const { page = 1, limit = 20 } = req.query;

@@ -6,6 +6,6 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 
 router.get('/', authenticate, getUserActivity);
-router.get('/videos/:id', getVideoActivities);
+router.get('/video/:id', authenticate, getVideoActivities);
 
 export default router;

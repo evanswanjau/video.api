@@ -20,7 +20,7 @@ const ActivitySchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ['video', 'comment', 'like', 'subscription', 'watch', 'save'],
+      enum: ['video', 'comment', 'like', 'subscription', 'watch', 'save', 'user'],
     },
     action: {
       type: String,

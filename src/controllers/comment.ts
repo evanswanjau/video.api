@@ -23,6 +23,11 @@ export const addComment = async (req: Request, res: Response) => {
 
     await comment.save();
 
+    const populatedComment = await Comment.findById(comment._id).populate(
+      'user',
+      'username',
+    );
+
     await Video.findByIdAndUpdate(videoId, {
       $push: { comments: comment._id },
     });
@@ -34,7 +39,7 @@ export const addComment = async (req: Request, res: Response) => {
       content: content.substring(0, 50),
     });
 
-    res.status(201).json(comment);
+    res.status(201).json(populatedComment);
   } catch (error: any) {
     res
       .status(500)
@@ -112,10 +117,32 @@ export const getCommentsByVideo = async (req: Request, res: Response) => {
     const { videoId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
+    // Get parent comments
     const comments = await Comment.find({ video: videoId, parentComment: null })
       .populate('user', 'username')
+      .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
+
+    // Get replies for these comments
+    const commentsWithReplies = await Promise.all(
+      comments.map(async (comment) => {
+        const replies = await Comment.find({ parentComment: comment._id })
+          .populate('user', 'username')
+          .sort({ createdAt: 1 })
+          .limit(5); // Limit to first 5 replies, adjust as needed
+
+        const totalReplies = await Comment.countDocuments({
+          parentComment: comment._id,
+        });
+
+        return {
+          ...comment.toObject(),
+          replies,
+          totalReplies,
+        };
+      }),
+    );
 
     const totalComments = await Comment.countDocuments({
       video: videoId,
@@ -131,15 +158,16 @@ export const getCommentsByVideo = async (req: Request, res: Response) => {
     }
 
     res.json({
-      comments,
+      comments: commentsWithReplies,
       total: totalComments,
       page: Number(page),
       pages: Math.ceil(totalComments / Number(limit)),
     });
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ error: 'Failed to fetch comments', details: error.message });
+    res.status(500).json({
+      error: 'Failed to fetch comments',
+      details: error.message,
+    });
   }
 };
 
